@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Archive</title>
+  <link rel="stylesheet" href="/static/app.css">
+</head>
+<body>
+  {{template "nav" .}}
+  <main class="shell">
+    <section id="dropzone" class="dropzone">
+      <div>
+        <h1>Documents</h1>
+        <p>Drop PDFs here or use the upload button. Newest documents appear first.</p>
+      </div>
+      <label class="upload-button">Upload PDF<input id="fileInput" type="file" accept="application/pdf" multiple></label>
+    </section>
+
+    <form class="searchbar" method="get">
+      <input name="q" value="{{.Q}}" placeholder="Search titles, summaries, tags, entities, synonyms...">
+      <select name="tag">
+        <option value="">All tags</option>
+        {{range .Tags}}<option value="{{.}}" {{if eq $.ActiveTag .}}selected{{end}}>{{.}}</option>{{end}}
+      </select>
+      <button>Search</button>
+    </form>
+
+    <section class="grid">
+      {{range .Docs}}
+      <article class="doc-card">
+        <a class="doc-link" href="/documents/{{.ID}}">
+          <div class="thumb">
+            {{if .PreviewPath}}<img src="/files/{{.PreviewPath}}" alt="Preview of {{.Title}}">{{else}}<div class="pdf-fallback">PDF</div>{{end}}
+          </div>
+          <div class="doc-body">
+            <h2>{{.Title}}</h2>
+            <p>{{.Summary}}</p>
+            <div class="tags">{{range .Tags}}<span>{{.}}</span>{{end}}</div>
+            <time>{{.CreatedAt.Format "2006-01-02 15:04"}}</time>
+            {{if .AnalysisError}}<small class="warn">AI fallback: {{.AnalysisError}}</small>{{end}}
+          </div>
+        </a>
+        <form class="delete-form" method="post" action="/delete/{{.ID}}" onsubmit="return confirm('Delete this document permanently?')">
+          <button type="submit" class="delete-button">Delete</button>
+        </form>
+        <form class="reprocess-form" method="post" action="/reprocess/{{.ID}}">
+          <input type="hidden" name="redirect" value="/">
+          <button type="submit" class="secondary-button">Reprocess</button>
+        </form>
+      </article>
+      {{else}}
+      <div class="empty">No documents yet.</div>
+      {{end}}
+    </section>
+  </main>
+  <script src="/static/app.js"></script>
+</body>
+</html>

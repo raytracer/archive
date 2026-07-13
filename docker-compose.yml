@@ -1,0 +1,11 @@
+services:
+  archive:
+    build: .
+    ports:
+      - "8080:8080"
+    volumes:
+      - archive-data:/app/data
+    restart: unless-stopped
+
+volumes:
+  archive-data:

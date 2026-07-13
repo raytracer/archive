@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Settings</title>
+  <link rel="stylesheet" href="/static/app.css">
+</head>
+<body>
+  {{template "nav" .}}
+  <main class="shell settings-grid">
+    <section>
+      <h1>AI Analysis</h1>
+      <form method="post" class="form">
+        <label>OpenAI-compatible endpoint <input name="ai_endpoint" value="{{.Settings.AIEndpoint}}" required></label>
+        <label>Model <input name="ai_model" value="{{.Settings.AIModel}}" required></label>
+        <label>API token <input name="ai_api_key" type="password" value="{{.Settings.AIAPIKey}}" autocomplete="off"></label>
+        <label>IMAP scan interval in minutes <input name="scan_every_mins" type="number" min="1" value="{{.Settings.ScanEveryMins}}"></label>
+        <label>Paperless-ngx URL <input name="paperless_base_url" value="{{.Settings.PaperlessBaseURL}}" placeholder="https://paperless.example.com"></label>
+        <label>Paperless-ngx API token <input name="paperless_api_token" type="password" value="{{.Settings.PaperlessAPIToken}}" autocomplete="off"></label>
+        <button>Save settings</button>
+      </form>
+    </section>
+    <section>
+      <h1>Paperless-ngx Import</h1>
+      <form action="/paperless/import" method="post" class="form">
+        <button type="submit">Import PDFs now</button>
+      </form>
+      {{with .PaperlessJob}}
+      <dl class="job-status">
+        <dt>Status</dt><dd>{{.Status}}</dd>
+        <dt>Total</dt><dd>{{.Total}}</dd>
+        <dt>Imported</dt><dd>{{.Imported}}</dd>
+        <dt>Skipped</dt><dd>{{.Skipped}}</dd>
+        <dt>Failed</dt><dd>{{.Failed}}</dd>
+        <dt>Started</dt><dd>{{.StartedAt.Format "2006-01-02 15:04"}}</dd>
+        {{if .FinishedAt}}<dt>Finished</dt><dd>{{.FinishedAt.Format "2006-01-02 15:04"}}</dd>{{end}}
+        {{if .LastError}}<dt>Last error</dt><dd class="warn">{{.LastError}}</dd>{{end}}
+      </dl>
+      {{else}}
+      <p class="muted">No Paperless-ngx import has been started yet.</p>
+      {{end}}
+    </section>
+    <section>
+      <h1>IMAP Accounts</h1>
+      <form action="/imap" method="post" class="form compact">
+        <label>Name <input name="name" required></label>
+        <label>Host <input name="host" required></label>
+        <label>Port <input name="port" type="number" value="993" required></label>
+        <label>Username <input name="username" required></label>
+        <label>Password <input name="password" type="password" required></label>
+        <label>Mailbox <input name="mailbox" value="INBOX"></label>
+        <label class="check"><input name="tls" type="checkbox" checked> TLS</label>
+        <label class="check"><input name="enabled" type="checkbox" checked> Enabled</label>
+        <button>Add IMAP account</button>
+      </form>
+      <div class="account-list">
+        {{range .Accounts}}
+        <article>
+          <strong>{{.Name}}</strong>
+          <span>{{.Username}}@{{.Host}}:{{.Port}} / {{.Mailbox}}</span>
+          {{if .LastCheckedAt}}<small>Last checked {{.LastCheckedAt.Format "2006-01-02 15:04"}}</small>{{end}}
+          {{if .LastError}}<small class="warn">{{.LastError}}</small>{{end}}
+        </article>
+        {{else}}<p class="muted">No accounts configured.</p>{{end}}
+      </div>
+    </section>
+  </main>
+</body>
+</html>

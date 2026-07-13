@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{.Title}}</title>
+  <link rel="stylesheet" href="/static/app.css">
+</head>
+<body>
+  {{template "nav" .}}
+  <main class="viewer-layout">
+    <aside class="meta-panel">
+      <a href="/" class="back">Back</a>
+      <h1>{{.Title}}</h1>
+      <p class="muted">{{.OriginalName}}</p>
+      <form method="post" action="/reprocess/{{.ID}}" class="inline-action">
+        <input type="hidden" name="redirect" value="/documents/{{.ID}}">
+        <button type="submit" class="secondary-button">Reprocess</button>
+      </form>
+      <div class="tags">{{range .Tags}}<span>{{.}}</span>{{end}}</div>
+      <dl>
+        <dt>Added</dt><dd>{{.CreatedAt.Format "2006-01-02 15:04"}}</dd>
+        <dt>Entities</dt><dd>{{.Entities}}</dd>
+        <dt>Keywords</dt><dd>{{.Keywords}}</dd>
+        <dt>Synonyms</dt><dd>{{.Synonyms}}</dd>
+      </dl>
+      <h2>Summary</h2>
+      <p>{{.Summary}}</p>
+      {{if .AnalysisError}}<p class="warn">AI fallback: {{.AnalysisError}}</p>{{end}}
+    </aside>
+    <section class="pdf-view">
+      <iframe src="/files/{{.FilePath}}" title="{{.Title}}"></iframe>
+    </section>
+  </main>
+</body>
+</html>

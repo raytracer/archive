@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Archive Login</title>
+  <link rel="stylesheet" href="/static/app.css">
+</head>
+<body class="auth">
+  <main class="login-panel">
+    <h1>Archive</h1>
+    {{if .Error}}<p class="error">{{.Error}}</p>{{end}}
+    <form method="post" class="form">
+      <label>Username <input name="username" autocomplete="username" required autofocus></label>
+      <label>Password <input name="password" type="password" autocomplete="current-password" required></label>
+      <button type="submit">Sign in</button>
+    </form>
+    <p class="muted">Default account: admin / admin. Change it in the database after first login.</p>
+  </main>
+</body>
+</html>

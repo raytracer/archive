@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Scan</title>
+  <link rel="stylesheet" href="/static/app.css">
+</head>
+<body>
+  {{template "nav" .}}
+  <main class="scanner">
+    <section class="camera-stage">
+      <video id="camera" playsinline autoplay muted></video>
+    </section>
+    <section class="scanner-tools">
+      <button id="startCamera">Open camera</button>
+      <button id="capturePage">Capture page</button>
+      <button id="uploadScan">Create PDF</button>
+      <span id="scanStatus">0 pages</span>
+    </section>
+    <section class="scan-editor">
+      <div class="edit-stage">
+        <canvas id="pageEditor"></canvas>
+      </div>
+      <section id="pages" class="page-strip"></section>
+    </section>
+  </main>
+  <script src="/static/scanner.js"></script>
+</body>
+</html>

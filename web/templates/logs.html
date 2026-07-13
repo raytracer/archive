@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Log</title>
+  <link rel="stylesheet" href="/static/app.css">
+</head>
+<body>
+  {{template "nav" .}}
+  <main class="shell">
+    <section class="log-header">
+      <h1>Log</h1>
+      <p>Recent application events from uploads, IMAP scans, Paperless imports, previews, and AI processing.</p>
+    </section>
+    <section class="log-list">
+      {{range .Logs}}
+      <article class="log-row level-{{.Level}}">
+        <time>{{.CreatedAt.Format "2006-01-02 15:04:05"}}</time>
+        <span class="log-level">{{.Level}}</span>
+        <span class="log-component">{{.Component}}</span>
+        <p>{{.Message}}</p>
+        <div class="log-refs">
+          {{if .DocumentID}}<a href="/documents/{{.DocumentID}}">Document #{{.DocumentID}}</a>{{end}}
+          {{if .ImportJobID}}<span>Job #{{.ImportJobID}}</span>{{end}}
+        </div>
+      </article>
+      {{else}}
+      <div class="empty">No log entries yet.</div>
+      {{end}}
+    </section>
+  </main>
+</body>
+</html>
