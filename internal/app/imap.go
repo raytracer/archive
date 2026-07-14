@@ -7,6 +7,7 @@ import (
 	"log"
 	"mime"
 	"mime/multipart"
+	"net/mail"
 	"os"
 	"path/filepath"
 	"strings"
@@ -129,6 +130,10 @@ func (s *Server) importPDFAttachments(r io.Reader) error {
 	if err != nil {
 		return err
 	}
+	var messageDate *time.Time
+	if parsed, err := mail.ParseDate(entity.Header.Get("Date")); err == nil {
+		messageDate = &parsed
+	}
 	return walkEntity(entity, func(filename, contentType string, body io.Reader) error {
 		if !isPDFPart(filename, contentType) {
 			return nil
@@ -150,7 +155,7 @@ func (s *Server) importPDFAttachments(r io.Reader) error {
 			return err
 		}
 		defer os.Remove(tmp.Name())
-		return s.importPDFFile(tmp.Name(), filename)
+		return s.importPDFFile(tmp.Name(), filename, messageDate)
 	})
 }
 
@@ -183,7 +188,7 @@ func walkEntity(e *message.Entity, fn func(filename, contentType string, body io
 	return fn(filename, contentType, e.Body)
 }
 
-func (s *Server) importPDFFile(path, originalName string) error {
+func (s *Server) importPDFFile(path, originalName string, createdAt *time.Time) error {
 	name := safeBase(originalName)
 	hash, err := fileSHA256(path)
 	if err != nil {
@@ -196,6 +201,9 @@ func (s *Server) importPDFFile(path, originalName string) error {
 	if duplicate {
 		addLog(s.db, "info", "imap", "Skipped duplicate PDF attachment "+name, nil, nil)
 		return nil
+	}
+	if createdAt != nil {
+		_ = updateDocumentCreatedAt(s.db, id, *createdAt)
 	}
 	rel := filepath.Join("pdfs", fmt.Sprintf("%d-%s", id, name))
 	dstPath := filepath.Join(s.cfg.DataDir, rel)

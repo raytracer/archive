@@ -53,6 +53,7 @@ func Run(cfg Config) error {
 	mux.Handle("/", s.requireAuth(http.HandlerFunc(s.index)))
 	mux.Handle("/documents", s.requireAuth(http.HandlerFunc(s.documents)))
 	mux.Handle("/documents/", s.requireAuth(http.HandlerFunc(s.documentDetail)))
+	mux.Handle("/metadata/", s.requireAuth(http.HandlerFunc(s.updateMetadata)))
 	mux.Handle("/delete/", s.requireAuth(http.HandlerFunc(s.deleteDocument)))
 	mux.Handle("/reprocess/", s.requireAuth(http.HandlerFunc(s.reprocessDocument)))
 	mux.Handle("/upload", s.requireAuth(http.HandlerFunc(s.upload)))
@@ -106,6 +107,30 @@ func (s *Server) documentDetail(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	s.render(w, r, "document.html", doc)
+}
+
+func (s *Server) updateMetadata(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	id, err := strconv.ParseInt(strings.TrimPrefix(r.URL.Path, "/metadata/"), 10, 64)
+	if err != nil {
+		http.NotFound(w, r)
+		return
+	}
+	title := strings.TrimSpace(r.FormValue("title"))
+	if title == "" {
+		http.Error(w, "title is required", http.StatusBadRequest)
+		return
+	}
+	tags := splitCSV(r.FormValue("tags"))
+	if err := updateDocumentMetadata(s.db, id, title, tags); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	addLog(s.db, "info", "document", fmt.Sprintf("Updated metadata for document %d", id), &id, nil)
+	http.Redirect(w, r, fmt.Sprintf("/documents/%d", id), http.StatusSeeOther)
 }
 
 func (s *Server) deleteDocument(w http.ResponseWriter, r *http.Request) {

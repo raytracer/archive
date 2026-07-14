@@ -210,6 +210,25 @@ input, select {
 .meta-panel dd { margin: 0; overflow-wrap: anywhere; }
 .back { color: var(--accent); font-weight: 800; }
 .inline-action { margin: 12px 0; }
+.doc-actions { display: flex; gap: 10px; flex-wrap: wrap; margin: 14px 0; }
+.download-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 38px;
+  padding: 0 13px;
+  border-radius: 6px;
+  background: var(--accent-2);
+  color: #fff;
+  font-weight: 800;
+}
+.metadata-form {
+  margin: 14px 0;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #f8fafb;
+}
 .pdf-view iframe { width: 100%; height: 100%; border: 0; background: #777; }
 
 .settings-grid {

@@ -13,6 +13,14 @@
       <a href="/" class="back">Back</a>
       <h1>{{.Title}}</h1>
       <p class="muted">{{.OriginalName}}</p>
+      <div class="doc-actions">
+        <a class="download-button" href="/files/{{.FilePath}}" download>Download</a>
+      </div>
+      <form method="post" action="/metadata/{{.ID}}" class="form metadata-form">
+        <label>Title <input name="title" value="{{.Title}}" required></label>
+        <label>Tags <input name="tags" value="{{range $i, $tag := .Tags}}{{if $i}}, {{end}}{{$tag}}{{end}}" placeholder="invoice, tax, bank"></label>
+        <button type="submit">Save metadata</button>
+      </form>
       <form method="post" action="/reprocess/{{.ID}}" class="inline-action">
         <input type="hidden" name="redirect" value="/documents/{{.ID}}">
         <button type="submit" class="secondary-button">Reprocess</button>

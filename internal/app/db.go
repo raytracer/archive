@@ -208,6 +208,16 @@ func updatePreview(db *sql.DB, id int64, previewPath string) error {
 	return err
 }
 
+func updateDocumentCreatedAt(db *sql.DB, id int64, createdAt time.Time) error {
+	_, err := db.Exec(`update documents set created_at = ? where id = ?`, createdAt.UTC(), id)
+	return err
+}
+
+func updateDocumentMetadata(db *sql.DB, id int64, title string, tags []string) error {
+	_, err := db.Exec(`update documents set title = ?, tags = ? where id = ?`, strings.TrimSpace(title), strings.Join(normalizeTags(tags), ","), id)
+	return err
+}
+
 func getDocument(db *sql.DB, id int64) (*Document, error) {
 	row := db.QueryRow(`select id,title,original_name,file_path,preview_path,sha256,tags,summary,entities,keywords,synonyms,created_at,processed_at,analysis_error from documents where id = ?`, id)
 	return scanDocument(row)
