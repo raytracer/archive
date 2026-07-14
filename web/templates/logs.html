@@ -13,6 +13,20 @@
       <h1>Log</h1>
       <p>Recent application events from uploads, IMAP scans, Paperless imports, previews, and AI processing.</p>
     </section>
+    <form class="log-filter" method="get">
+      <label>From <input type="datetime-local" name="from" value="{{.From}}"></label>
+      <label>To <input type="datetime-local" name="to" value="{{.To}}"></label>
+      <label>Limit
+        <select name="limit">
+          <option value="100" {{if eq .Limit 100}}selected{{end}}>100</option>
+          <option value="250" {{if eq .Limit 250}}selected{{end}}>250</option>
+          <option value="500" {{if eq .Limit 500}}selected{{end}}>500</option>
+        </select>
+      </label>
+      <button type="submit">Apply</button>
+      <a href="/logs" class="filter-reset">Reset</a>
+      {{if .FilterError}}<span class="error">{{.FilterError}}</span>{{end}}
+    </form>
     <section class="log-list">
       {{range .Logs}}
       <article class="log-row level-{{.Level}}">

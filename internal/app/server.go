@@ -62,6 +62,7 @@ func Run(cfg Config) error {
 	mux.Handle("/settings", s.requireAuth(http.HandlerFunc(s.settings)))
 	mux.Handle("/logs", s.requireAuth(http.HandlerFunc(s.logs)))
 	mux.Handle("/password", s.requireAuth(http.HandlerFunc(s.changePassword)))
+	mux.Handle("/imap/delete/", s.requireAuth(http.HandlerFunc(s.deleteIMAP)))
 	mux.Handle("/imap", s.requireAuth(http.HandlerFunc(s.addIMAP)))
 	mux.Handle("/paperless/import", s.requireAuth(http.HandlerFunc(s.importPaperless)))
 	log.Printf("listening on %s", cfg.Addr)
@@ -274,12 +275,30 @@ func (s *Server) scanner(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) logs(w http.ResponseWriter, r *http.Request) {
-	entries, err := listLogs(s.db, 250)
+	from, fromErr := parseDateTimeLocal(r.URL.Query().Get("from"))
+	to, toErr := parseDateTimeLocal(r.URL.Query().Get("to"))
+	limit, _ := strconv.Atoi(r.URL.Query().Get("limit"))
+	if limit <= 0 {
+		limit = 250
+	}
+	entries, err := listLogs(s.db, from, to, limit)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	s.render(w, r, "logs.html", map[string]any{"Logs": entries})
+	filterError := ""
+	if fromErr != nil {
+		filterError = "Invalid from date/time."
+	} else if toErr != nil {
+		filterError = "Invalid to date/time."
+	}
+	s.render(w, r, "logs.html", map[string]any{
+		"Logs":        entries,
+		"From":        r.URL.Query().Get("from"),
+		"To":          r.URL.Query().Get("to"),
+		"Limit":       limit,
+		"FilterError": filterError,
+	})
 }
 
 func (s *Server) settings(w http.ResponseWriter, r *http.Request) {
@@ -402,6 +421,29 @@ func (s *Server) addIMAP(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/settings", http.StatusSeeOther)
 }
 
+func (s *Server) deleteIMAP(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	id, err := strconv.ParseInt(strings.TrimPrefix(r.URL.Path, "/imap/delete/"), 10, 64)
+	if err != nil {
+		http.NotFound(w, r)
+		return
+	}
+	account, err := getIMAPAccount(s.db, id)
+	if err != nil {
+		http.NotFound(w, r)
+		return
+	}
+	if err := deleteIMAPAccount(s.db, id); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	addLog(s.db, "info", "imap", "Deleted IMAP account "+account.Name, nil, nil)
+	http.Redirect(w, r, "/settings", http.StatusSeeOther)
+}
+
 func (s *Server) login(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodPost {
 		u, err := authenticate(s.db, r.FormValue("username"), r.FormValue("password"))
@@ -478,6 +520,18 @@ func defaultString(value, fallback string) string {
 		return fallback
 	}
 	return value
+}
+
+func parseDateTimeLocal(value string) (*time.Time, error) {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return nil, nil
+	}
+	parsed, err := time.ParseInLocation("2006-01-02T15:04", value, time.Local)
+	if err != nil {
+		return nil, err
+	}
+	return &parsed, nil
 }
 
 func removeDataFile(dataDir, rel string) {

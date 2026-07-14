@@ -432,11 +432,23 @@ func nullableInt64(value *int64) any {
 	return *value
 }
 
-func listLogs(db *sql.DB, limit int) ([]AppLog, error) {
+func listLogs(db *sql.DB, from, to *time.Time, limit int) ([]AppLog, error) {
 	if limit <= 0 || limit > 500 {
 		limit = 200
 	}
-	rows, err := db.Query(`select id,level,component,message,document_id,import_job_id,created_at from app_logs order by created_at desc limit ?`, limit)
+	query := `select id,level,component,message,document_id,import_job_id,created_at from app_logs where 1=1`
+	var args []any
+	if from != nil {
+		query += ` and created_at >= ?`
+		args = append(args, from.UTC())
+	}
+	if to != nil {
+		query += ` and created_at <= ?`
+		args = append(args, to.UTC())
+	}
+	query += ` order by created_at desc limit ?`
+	args = append(args, limit)
+	rows, err := db.Query(query, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -486,6 +498,27 @@ func listIMAPAccounts(db *sql.DB) ([]IMAPAccount, error) {
 func saveIMAPAccount(db *sql.DB, a IMAPAccount) error {
 	_, err := db.Exec(`insert into imap_accounts(name,host,port,username,password,mailbox,tls,enabled)
 		values(?,?,?,?,?,?,?,?)`, a.Name, a.Host, a.Port, a.Username, a.Password, a.Mailbox, boolInt(a.TLS), boolInt(a.Enabled))
+	return err
+}
+
+func getIMAPAccount(db *sql.DB, id int64) (*IMAPAccount, error) {
+	row := db.QueryRow(`select id,name,host,port,username,password,mailbox,tls,enabled,last_checked_at,last_error,created_at from imap_accounts where id = ?`, id)
+	var a IMAPAccount
+	var tls, enabled int
+	var checked sql.NullTime
+	if err := row.Scan(&a.ID, &a.Name, &a.Host, &a.Port, &a.Username, &a.Password, &a.Mailbox, &tls, &enabled, &checked, &a.LastError, &a.CreatedAt); err != nil {
+		return nil, err
+	}
+	a.TLS = tls == 1
+	a.Enabled = enabled == 1
+	if checked.Valid {
+		a.LastCheckedAt = &checked.Time
+	}
+	return &a, nil
+}
+
+func deleteIMAPAccount(db *sql.DB, id int64) error {
+	_, err := db.Exec(`delete from imap_accounts where id = ?`, id)
 	return err
 }
 

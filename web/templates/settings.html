@@ -68,10 +68,15 @@
       <div class="account-list">
         {{range .Accounts}}
         <article>
-          <strong>{{.Name}}</strong>
-          <span>{{.Username}}@{{.Host}}:{{.Port}} / {{.Mailbox}}</span>
-          {{if .LastCheckedAt}}<small>Last checked {{.LastCheckedAt.Format "2006-01-02 15:04"}}</small>{{end}}
-          {{if .LastError}}<small class="warn">{{.LastError}}</small>{{end}}
+          <div class="account-main">
+            <strong>{{.Name}}</strong>
+            <span>{{.Username}}@{{.Host}}:{{.Port}} / {{.Mailbox}}</span>
+            {{if .LastCheckedAt}}<small>Last checked {{.LastCheckedAt.Format "2006-01-02 15:04"}}</small>{{end}}
+            {{if .LastError}}<small class="warn">{{.LastError}}</small>{{end}}
+          </div>
+          <form method="post" action="/imap/delete/{{.ID}}" onsubmit="return confirm('Delete this IMAP account?')">
+            <button type="submit" class="delete-button inline-delete">Delete</button>
+          </form>
         </article>
         {{else}}<p class="muted">No accounts configured.</p>{{end}}
       </div>
