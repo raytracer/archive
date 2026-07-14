@@ -161,6 +161,31 @@ func authenticate(db *sql.DB, username, password string) (*User, error) {
 	return u, nil
 }
 
+func getUserByID(db *sql.DB, id int64) (*User, error) {
+	u := &User{}
+	err := db.QueryRow(`select id, username, password_hash from users where id = ?`, id).Scan(&u.ID, &u.Username, &u.PasswordHash)
+	if err != nil {
+		return nil, err
+	}
+	return u, nil
+}
+
+func updatePassword(db *sql.DB, userID int64, currentPassword, newPassword string) error {
+	u, err := getUserByID(db, userID)
+	if err != nil {
+		return err
+	}
+	if bcrypt.CompareHashAndPassword([]byte(u.PasswordHash), []byte(currentPassword)) != nil {
+		return errors.New("current password is incorrect")
+	}
+	hash, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
+	if err != nil {
+		return err
+	}
+	_, err = db.Exec(`update users set password_hash = ? where id = ?`, string(hash), userID)
+	return err
+}
+
 func createDocument(db *sql.DB, title, originalName, filePath, sha256 string) (int64, bool, error) {
 	res, err := db.Exec(`insert or ignore into documents(title, original_name, file_path, sha256) values(?,?,?,?)`, title, originalName, filePath, sha256)
 	if err != nil {

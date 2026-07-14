@@ -12,6 +12,7 @@ import (
 	"log"
 	"mime/multipart"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -60,6 +61,7 @@ func Run(cfg Config) error {
 	mux.Handle("/scanner", s.requireAuth(http.HandlerFunc(s.scanner)))
 	mux.Handle("/settings", s.requireAuth(http.HandlerFunc(s.settings)))
 	mux.Handle("/logs", s.requireAuth(http.HandlerFunc(s.logs)))
+	mux.Handle("/password", s.requireAuth(http.HandlerFunc(s.changePassword)))
 	mux.Handle("/imap", s.requireAuth(http.HandlerFunc(s.addIMAP)))
 	mux.Handle("/paperless/import", s.requireAuth(http.HandlerFunc(s.importPaperless)))
 	log.Printf("listening on %s", cfg.Addr)
@@ -305,7 +307,42 @@ func (s *Server) settings(w http.ResponseWriter, r *http.Request) {
 	settings, _ := getSettings(s.db)
 	accounts, _ := listIMAPAccounts(s.db)
 	job, _ := latestImportJob(s.db, "paperless-ngx")
-	s.render(w, r, "settings.html", map[string]any{"Settings": settings, "Accounts": accounts, "PaperlessJob": job})
+	s.render(w, r, "settings.html", map[string]any{
+		"Settings":        settings,
+		"Accounts":        accounts,
+		"PaperlessJob":    job,
+		"PasswordError":   r.URL.Query().Get("password_error"),
+		"PasswordSuccess": r.URL.Query().Get("password_success") == "1",
+	})
+}
+
+func (s *Server) changePassword(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	userID, err := s.currentUserID(r)
+	if err != nil {
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		return
+	}
+	currentPassword := r.FormValue("current_password")
+	newPassword := r.FormValue("new_password")
+	confirmPassword := r.FormValue("confirm_password")
+	if len(newPassword) < 8 {
+		http.Redirect(w, r, "/settings?password_error="+url.QueryEscape("New password must be at least 8 characters."), http.StatusSeeOther)
+		return
+	}
+	if newPassword != confirmPassword {
+		http.Redirect(w, r, "/settings?password_error="+url.QueryEscape("New password confirmation does not match."), http.StatusSeeOther)
+		return
+	}
+	if err := updatePassword(s.db, userID, currentPassword, newPassword); err != nil {
+		http.Redirect(w, r, "/settings?password_error="+url.QueryEscape(err.Error()), http.StatusSeeOther)
+		return
+	}
+	addLog(s.db, "info", "auth", fmt.Sprintf("Changed password for user %d", userID), nil, nil)
+	http.Redirect(w, r, "/settings?password_success=1", http.StatusSeeOther)
 }
 
 func (s *Server) importPaperless(w http.ResponseWriter, r *http.Request) {
@@ -412,6 +449,16 @@ func (s *Server) requireAuth(next http.Handler) http.Handler {
 		}
 		next.ServeHTTP(w, r)
 	})
+}
+
+func (s *Server) currentUserID(r *http.Request) (int64, error) {
+	c, err := r.Cookie("archive_session")
+	if err != nil || c.Value == "" {
+		return 0, errors.New("missing session")
+	}
+	var id int64
+	err = s.db.QueryRow(`select user_id from sessions where token = ? and expires_at > ?`, c.Value, time.Now().UTC()).Scan(&id)
+	return id, err
 }
 
 func randomToken() string {

@@ -191,6 +191,7 @@ input, select {
 .form .check { display: flex; align-items: center; gap: 8px; }
 .form .check input { width: auto; min-height: auto; }
 .error { color: #b42318; }
+.notice { color: var(--accent-2); font-weight: 800; }
 
 .viewer-layout {
   display: grid;
