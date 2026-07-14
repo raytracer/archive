@@ -124,15 +124,6 @@ func migrate(db *sql.DB) error {
 			return err
 		}
 	}
-	if err := addColumnIfMissing(db, "documents", "source", "text not null default ''"); err != nil {
-		return err
-	}
-	if err := addColumnIfMissing(db, "documents", "source_id", "text not null default ''"); err != nil {
-		return err
-	}
-	if err := addColumnIfMissing(db, "documents", "sha256", "text not null default ''"); err != nil {
-		return err
-	}
 	if _, err := db.Exec(`create unique index if not exists documents_source_unique on documents(source, source_id) where source <> '' and source_id <> ''`); err != nil {
 		return err
 	}
@@ -140,32 +131,6 @@ func migrate(db *sql.DB) error {
 		return err
 	}
 	return ensureDefaultUser(db)
-}
-
-func addColumnIfMissing(db *sql.DB, table, column, definition string) error {
-	rows, err := db.Query(`pragma table_info(` + table + `)`)
-	if err != nil {
-		return err
-	}
-	defer rows.Close()
-	for rows.Next() {
-		var cid int
-		var name, typ string
-		var notNull int
-		var defaultValue any
-		var pk int
-		if err := rows.Scan(&cid, &name, &typ, &notNull, &defaultValue, &pk); err != nil {
-			return err
-		}
-		if name == column {
-			return nil
-		}
-	}
-	if err := rows.Err(); err != nil {
-		return err
-	}
-	_, err = db.Exec(`alter table ` + table + ` add column ` + column + ` ` + definition)
-	return err
 }
 
 func ensureDefaultUser(db *sql.DB) error {
