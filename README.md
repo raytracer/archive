@@ -39,6 +39,12 @@ docker compose up --build
 
 The app stores SQLite data, PDFs, and previews in the `archive-data` volume.
 
+To use a different host port without changing tracked files, create a local `.env` file:
+
+```sh
+ARCHIVE_PORT=9090
+```
+
 ## Search Concept
 
 Each document is indexed into SQLite FTS5. During analysis the app asks AI to derive:

@@ -2,7 +2,7 @@ services:
   archive:
     build: .
     ports:
-      - "8080:8080"
+      - "${ARCHIVE_PORT:-8080}:8080"
     volumes:
       - archive-data:/app/data
     restart: unless-stopped
