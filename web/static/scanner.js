@@ -133,6 +133,12 @@ function pointerPoint(event) {
   return { x: event.clientX - rect.left, y: event.clientY - rect.top };
 }
 
+function touchPoint(event) {
+  const touch = event.touches[0] || event.changedTouches[0];
+  const rect = editor.getBoundingClientRect();
+  return { x: touch.clientX - rect.left, y: touch.clientY - rect.top };
+}
+
 function nearestPoint(screenPoint) {
   const page = pages[activePage];
   if (!page) return -1;
@@ -155,10 +161,7 @@ editor.addEventListener("pointermove", event => {
   if (draggingPoint < 0 || activePage < 0) return;
   event.preventDefault();
   event.stopPropagation();
-  const page = pages[activePage];
-  const view = imageView(page.raw, editor.clientWidth, editor.clientHeight);
-  page.points[draggingPoint] = screenToRaw(pointerPoint(event), page.raw, view);
-  drawEditor();
+  dragPointTo(pointerPoint(event));
 });
 
 editor.addEventListener("pointerup", event => {
@@ -192,17 +195,47 @@ function stopDragging() {
   }
 }
 
-function blockTouchWhileDragging(event) {
+function dragPointTo(screenPoint) {
+  if (draggingPoint < 0 || activePage < 0) return;
+  const page = pages[activePage];
+  const view = imageView(page.raw, editor.clientWidth, editor.clientHeight);
+  page.points[draggingPoint] = screenToRaw(screenPoint, page.raw, view);
+  drawEditor();
+}
+
+function handleTouchStart(event) {
+  if (event.touches.length !== 1) {
+    event.preventDefault();
+    return;
+  }
+  draggingPoint = nearestPoint(touchPoint(event));
+  if (draggingPoint >= 0) {
+    event.preventDefault();
+    event.stopPropagation();
+    lockPageScroll();
+  }
+}
+
+function handleTouchMove(event) {
+  event.preventDefault();
+  event.stopPropagation();
+  if (event.touches.length === 1) {
+    dragPointTo(touchPoint(event));
+  }
+}
+
+function handleTouchEnd(event) {
   if (draggingPoint >= 0) {
     event.preventDefault();
     event.stopPropagation();
   }
+  stopDragging();
 }
 
-editor.addEventListener("touchstart", blockTouchWhileDragging, { passive: false });
-editor.addEventListener("touchmove", blockTouchWhileDragging, { passive: false });
-editor.addEventListener("touchend", blockTouchWhileDragging, { passive: false });
-editStage.addEventListener("touchmove", blockTouchWhileDragging, { passive: false });
+editStage.addEventListener("touchstart", handleTouchStart, { passive: false });
+editStage.addEventListener("touchmove", handleTouchMove, { passive: false });
+editStage.addEventListener("touchend", handleTouchEnd, { passive: false });
+editStage.addEventListener("touchcancel", handleTouchEnd, { passive: false });
 
 window.addEventListener("resize", drawEditor);
 

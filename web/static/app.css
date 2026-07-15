@@ -19,6 +19,10 @@ body {
   color: var(--ink);
 }
 
+.scan-page {
+  overscroll-behavior: none;
+}
+
 a { color: inherit; text-decoration: none; }
 
 .topbar {
