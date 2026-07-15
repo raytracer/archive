@@ -141,18 +141,36 @@ function nearestPoint(screenPoint) {
 
 editor.addEventListener("pointerdown", event => {
   draggingPoint = nearestPoint(pointerPoint(event));
-  if (draggingPoint >= 0) editor.setPointerCapture(event.pointerId);
+  if (draggingPoint >= 0) {
+    event.preventDefault();
+    event.stopPropagation();
+    editor.setPointerCapture(event.pointerId);
+  }
 });
 
 editor.addEventListener("pointermove", event => {
   if (draggingPoint < 0 || activePage < 0) return;
+  event.preventDefault();
+  event.stopPropagation();
   const page = pages[activePage];
   const view = imageView(page.raw, editor.clientWidth, editor.clientHeight);
   page.points[draggingPoint] = screenToRaw(pointerPoint(event), page.raw, view);
   drawEditor();
 });
 
-editor.addEventListener("pointerup", () => {
+editor.addEventListener("pointerup", event => {
+  if (draggingPoint >= 0) {
+    event.preventDefault();
+    event.stopPropagation();
+  }
+  draggingPoint = -1;
+});
+
+editor.addEventListener("pointercancel", () => {
+  draggingPoint = -1;
+});
+
+editor.addEventListener("lostpointercapture", () => {
   draggingPoint = -1;
 });
 
