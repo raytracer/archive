@@ -74,9 +74,21 @@ button:hover, .upload-button:hover { filter: brightness(.94); }
 
 .searchbar {
   display: grid;
-  grid-template-columns: 1fr minmax(160px, 220px) auto;
+  grid-template-columns: 1fr minmax(160px, 220px) auto auto;
   gap: 10px;
   margin: 18px 0;
+}
+.clear-search {
+  min-height: 42px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 13px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #fff;
+  color: var(--accent);
+  font-weight: 800;
 }
 input, select {
   width: 100%;

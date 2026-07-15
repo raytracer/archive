@@ -84,7 +84,7 @@ func (s *Server) index(w http.ResponseWriter, r *http.Request) {
 	}
 	tags, _ := allTags(s.db)
 	s.render(w, r, "index.html", map[string]any{
-		"Docs": docs, "Tags": tags, "Q": r.URL.Query().Get("q"), "ActiveTag": r.URL.Query().Get("tag"),
+		"Docs": docs, "Tags": tags, "Q": r.URL.Query().Get("q"), "ActiveTag": r.URL.Query().Get("tag"), "CurrentPath": r.URL.RequestURI(),
 	})
 }
 
@@ -158,7 +158,7 @@ func (s *Server) deleteDocument(w http.ResponseWriter, r *http.Request) {
 	removeDataFile(s.cfg.DataDir, doc.FilePath)
 	removeDataFile(s.cfg.DataDir, doc.PreviewPath)
 	addLog(s.db, "info", "document", "Deleted document "+doc.OriginalName, &id, nil)
-	http.Redirect(w, r, "/", http.StatusSeeOther)
+	http.Redirect(w, r, safeRedirect(r.FormValue("redirect"), "/"), http.StatusSeeOther)
 }
 
 func (s *Server) reprocessDocument(w http.ResponseWriter, r *http.Request) {
@@ -177,11 +177,7 @@ func (s *Server) reprocessDocument(w http.ResponseWriter, r *http.Request) {
 	}
 	addLog(s.db, "info", "document", fmt.Sprintf("Queued reprocess for document %d", id), &id, nil)
 	go s.processDocument(id)
-	redirect := r.FormValue("redirect")
-	if redirect == "" || !strings.HasPrefix(redirect, "/") || strings.HasPrefix(redirect, "//") {
-		redirect = "/"
-	}
-	http.Redirect(w, r, redirect, http.StatusSeeOther)
+	http.Redirect(w, r, safeRedirect(r.FormValue("redirect"), "/"), http.StatusSeeOther)
 }
 
 func (s *Server) upload(w http.ResponseWriter, r *http.Request) {
@@ -517,6 +513,13 @@ func safeBase(name string) string {
 
 func defaultString(value, fallback string) string {
 	if strings.TrimSpace(value) == "" {
+		return fallback
+	}
+	return value
+}
+
+func safeRedirect(value, fallback string) string {
+	if value == "" || !strings.HasPrefix(value, "/") || strings.HasPrefix(value, "//") {
 		return fallback
 	}
 	return value

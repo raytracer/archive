@@ -24,6 +24,7 @@
         {{range .Tags}}<option value="{{.}}" {{if eq $.ActiveTag .}}selected{{end}}>{{.}}</option>{{end}}
       </select>
       <button>Search</button>
+      <a class="clear-search" href="/">Clear</a>
     </form>
 
     <section class="grid">
@@ -42,10 +43,11 @@
           </div>
         </a>
         <form class="delete-form" method="post" action="/delete/{{.ID}}" onsubmit="return confirm('Delete this document permanently?')">
+          <input type="hidden" name="redirect" value="{{$.CurrentPath}}">
           <button type="submit" class="delete-button">Delete</button>
         </form>
         <form class="reprocess-form" method="post" action="/reprocess/{{.ID}}">
-          <input type="hidden" name="redirect" value="/">
+          <input type="hidden" name="redirect" value="{{$.CurrentPath}}">
           <button type="submit" class="secondary-button">Reprocess</button>
         </form>
       </article>
