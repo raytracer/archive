@@ -74,9 +74,14 @@ button:hover, .upload-button:hover { filter: brightness(.94); }
 
 .searchbar {
   display: grid;
-  grid-template-columns: 1fr minmax(160px, 220px) auto auto;
+  grid-template-columns: minmax(0, 1fr) minmax(160px, 220px) auto;
   gap: 10px;
   margin: 18px 0;
+}
+.search-actions {
+  display: flex;
+  gap: 10px;
+  align-items: stretch;
 }
 .clear-search {
   min-height: 42px;
@@ -438,6 +443,7 @@ input, select {
   .topbar { align-items: flex-start; flex-direction: column; gap: 8px; }
   .dropzone { align-items: stretch; flex-direction: column; padding: 20px; }
   .searchbar { grid-template-columns: 1fr; }
+  .search-actions { display: grid; grid-template-columns: 1fr 1fr; }
   .viewer-layout { height: auto; grid-template-columns: 1fr; }
   .meta-panel { border-right: 0; border-bottom: 1px solid var(--line); }
   .pdf-view iframe { height: 72vh; }

@@ -1,5 +1,6 @@
 const video = document.querySelector("#camera");
 const editor = document.querySelector("#pageEditor");
+const editStage = editor.parentElement;
 const ctx = editor.getContext("2d");
 const pagesEl = document.querySelector("#pages");
 const statusEl = document.querySelector("#scanStatus");
@@ -7,6 +8,7 @@ const statusEl = document.querySelector("#scanStatus");
 const pages = [];
 let activePage = -1;
 let draggingPoint = -1;
+let previousBodyOverflow = "";
 
 document.querySelector("#startCamera").addEventListener("click", async () => {
   const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: false });
@@ -144,6 +146,7 @@ editor.addEventListener("pointerdown", event => {
   if (draggingPoint >= 0) {
     event.preventDefault();
     event.stopPropagation();
+    lockPageScroll();
     editor.setPointerCapture(event.pointerId);
   }
 });
@@ -163,16 +166,43 @@ editor.addEventListener("pointerup", event => {
     event.preventDefault();
     event.stopPropagation();
   }
-  draggingPoint = -1;
+  stopDragging();
 });
 
 editor.addEventListener("pointercancel", () => {
-  draggingPoint = -1;
+  stopDragging();
 });
 
 editor.addEventListener("lostpointercapture", () => {
-  draggingPoint = -1;
+  stopDragging();
 });
+
+function lockPageScroll() {
+  if (previousBodyOverflow === "") {
+    previousBodyOverflow = document.body.style.overflow || " ";
+    document.body.style.overflow = "hidden";
+  }
+}
+
+function stopDragging() {
+  draggingPoint = -1;
+  if (previousBodyOverflow !== "") {
+    document.body.style.overflow = previousBodyOverflow === " " ? "" : previousBodyOverflow;
+    previousBodyOverflow = "";
+  }
+}
+
+function blockTouchWhileDragging(event) {
+  if (draggingPoint >= 0) {
+    event.preventDefault();
+    event.stopPropagation();
+  }
+}
+
+editor.addEventListener("touchstart", blockTouchWhileDragging, { passive: false });
+editor.addEventListener("touchmove", blockTouchWhileDragging, { passive: false });
+editor.addEventListener("touchend", blockTouchWhileDragging, { passive: false });
+editStage.addEventListener("touchmove", blockTouchWhileDragging, { passive: false });
 
 window.addEventListener("resize", drawEditor);
 
@@ -209,12 +239,6 @@ function proposeDocumentBox(canvas) {
     maxX = w * .88;
     maxY = h * .90;
   }
-  const padX = (maxX - minX) * .03;
-  const padY = (maxY - minY) * .03;
-  minX = clamp(minX - padX, 0, w);
-  minY = clamp(minY - padY, 0, h);
-  maxX = clamp(maxX + padX, 0, w);
-  maxY = clamp(maxY + padY, 0, h);
   return [
     { x: minX / scale, y: minY / scale },
     { x: maxX / scale, y: minY / scale },
