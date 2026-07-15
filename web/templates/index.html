@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Archive</title>
-  <link rel="stylesheet" href="/static/app.css">
+  <link rel="stylesheet" href="{{asset "/static/app.css"}}">
 </head>
 <body>
   {{template "nav" .}}
@@ -58,6 +58,6 @@
       {{end}}
     </section>
   </main>
-  <script src="/static/app.js"></script>
+  <script src="{{asset "/static/app.js"}}"></script>
 </body>
 </html>

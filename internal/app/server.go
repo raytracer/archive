@@ -2,6 +2,7 @@ package app
 
 import (
 	"crypto/rand"
+	"crypto/sha256"
 	"database/sql"
 	"encoding/hex"
 	"encoding/json"
@@ -25,6 +26,7 @@ type Server struct {
 	cfg              Config
 	db               *sql.DB
 	templates        *template.Template
+	assetVersions    map[string]string
 	paperlessMu      sync.Mutex
 	paperlessRunning bool
 }
@@ -40,11 +42,20 @@ func Run(cfg Config) error {
 	if err != nil {
 		return err
 	}
-	tmpl, err := template.ParseGlob("web/templates/*.html")
+	assetVersions := buildAssetVersions("web/static")
+	tmpl, err := template.New("").Funcs(template.FuncMap{
+		"asset": func(path string) string {
+			version := assetVersions[path]
+			if version == "" {
+				return path
+			}
+			return path + "?v=" + version
+		},
+	}).ParseGlob("web/templates/*.html")
 	if err != nil {
 		return err
 	}
-	s := &Server{cfg: cfg, db: db, templates: tmpl}
+	s := &Server{cfg: cfg, db: db, templates: tmpl, assetVersions: assetVersions}
 	go s.imapLoop()
 	mux := http.NewServeMux()
 	mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("web/static"))))
@@ -67,6 +78,31 @@ func Run(cfg Config) error {
 	mux.Handle("/paperless/import", s.requireAuth(http.HandlerFunc(s.importPaperless)))
 	log.Printf("listening on %s", cfg.Addr)
 	return http.ListenAndServe(cfg.Addr, mux)
+}
+
+func buildAssetVersions(staticDir string) map[string]string {
+	versions := map[string]string{}
+	entries, err := os.ReadDir(staticDir)
+	if err != nil {
+		return versions
+	}
+	for _, entry := range entries {
+		if entry.IsDir() {
+			continue
+		}
+		name := entry.Name()
+		if !strings.HasSuffix(name, ".css") && !strings.HasSuffix(name, ".js") {
+			continue
+		}
+		path := filepath.Join(staticDir, name)
+		data, err := os.ReadFile(path)
+		if err != nil {
+			continue
+		}
+		sum := sha256.Sum256(data)
+		versions["/static/"+name] = hex.EncodeToString(sum[:])[:12]
+	}
+	return versions
 }
 
 func (s *Server) render(w http.ResponseWriter, r *http.Request, name string, data any) {

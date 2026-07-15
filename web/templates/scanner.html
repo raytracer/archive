@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Scan</title>
-  <link rel="stylesheet" href="/static/app.css">
+  <link rel="stylesheet" href="{{asset "/static/app.css"}}">
 </head>
 <body>
   {{template "nav" .}}
@@ -25,6 +25,6 @@
       <section id="pages" class="page-strip"></section>
     </section>
   </main>
-  <script src="/static/scanner.js"></script>
+  <script src="{{asset "/static/scanner.js"}}"></script>
 </body>
 </html>
