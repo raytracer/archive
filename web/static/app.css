@@ -386,7 +386,8 @@ input, select {
 .edit-stage {
   display: grid;
   place-items: center;
-  min-height: 320px;
+  height: clamp(320px, 42vh, 620px);
+  min-height: 0;
   padding: 14px;
   overflow: hidden;
   border: 1px solid var(--line);
@@ -458,6 +459,7 @@ input, select {
   .scanner-tools span { width: 100%; margin-left: 0; }
   .scanner { min-height: calc(100vh - 102px); grid-template-rows: minmax(220px, 34vh) auto minmax(360px, 1fr); padding: 10px; gap: 10px; }
   .scan-editor { grid-template-columns: 1fr; grid-template-rows: 1fr auto; }
+  .edit-stage { height: min(54vh, 440px); }
   .page-strip { flex-direction: row; overflow-x: auto; overflow-y: hidden; }
   .page-thumb { flex: 0 0 120px; }
   .log-row { grid-template-columns: 1fr; gap: 7px; }

@@ -9,6 +9,7 @@ const pages = [];
 let activePage = -1;
 let draggingPoint = -1;
 let previousBodyOverflow = "";
+let editorView = { width: 1, height: 1 };
 
 document.querySelector("#startCamera").addEventListener("click", async () => {
   const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: false });
@@ -69,18 +70,32 @@ function updateStatus() {
 }
 
 function drawEditor() {
-  const page = pages[activePage];
-  const parent = editor.parentElement.getBoundingClientRect();
-  const cssWidth = Math.max(1, parent.width - 24);
-  const cssHeight = Math.max(1, parent.height - 24);
+  resizeEditorCanvas();
+  paintEditor();
+}
+
+function resizeEditorCanvas() {
+  const rect = editStage.getBoundingClientRect();
+  const cssWidth = Math.max(1, Math.floor(rect.width - 28));
+  const cssHeight = Math.max(1, Math.floor(rect.height - 28));
+  if (editorView.width === cssWidth && editorView.height === cssHeight) {
+    return;
+  }
+  editorView = { width: cssWidth, height: cssHeight };
   editor.style.width = `${cssWidth}px`;
   editor.style.height = `${cssHeight}px`;
-  editor.width = cssWidth * devicePixelRatio;
-  editor.height = cssHeight * devicePixelRatio;
+  editor.width = Math.floor(cssWidth * devicePixelRatio);
+  editor.height = Math.floor(cssHeight * devicePixelRatio);
+}
+
+function paintEditor() {
+  const page = pages[activePage];
+  const cssWidth = editorView.width;
+  const cssHeight = editorView.height;
   ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
   ctx.clearRect(0, 0, cssWidth, cssHeight);
   if (!page) {
-    ctx.fillStyle = "#111820";
+    ctx.fillStyle = "#edf1f5";
     ctx.fillRect(0, 0, cssWidth, cssHeight);
     return;
   }
@@ -142,7 +157,7 @@ function touchPoint(event) {
 function nearestPoint(screenPoint) {
   const page = pages[activePage];
   if (!page) return -1;
-  const view = imageView(page.raw, editor.clientWidth, editor.clientHeight);
+  const view = imageView(page.raw, editorView.width, editorView.height);
   const points = page.points.map(point => rawToScreen(point, page.raw, view));
   return points.findIndex(point => Math.hypot(point.x - screenPoint.x, point.y - screenPoint.y) < 34);
 }
@@ -198,9 +213,9 @@ function stopDragging() {
 function dragPointTo(screenPoint) {
   if (draggingPoint < 0 || activePage < 0) return;
   const page = pages[activePage];
-  const view = imageView(page.raw, editor.clientWidth, editor.clientHeight);
+  const view = imageView(page.raw, editorView.width, editorView.height);
   page.points[draggingPoint] = screenToRaw(screenPoint, page.raw, view);
-  drawEditor();
+  paintEditor();
 }
 
 function handleTouchStart(event) {
