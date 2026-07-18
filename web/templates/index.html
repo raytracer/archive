@@ -34,7 +34,7 @@
       <article class="doc-card">
         <a class="doc-link" href="/documents/{{.ID}}">
           <div class="thumb">
-            {{if .PreviewPath}}<img src="/files/{{.PreviewPath}}" alt="Preview of {{.Title}}">{{else}}<div class="pdf-fallback">PDF</div>{{end}}
+            {{if .PreviewPath}}<img src="{{fileURL .PreviewPath}}" alt="Preview of {{.Title}}">{{else}}<div class="pdf-fallback">PDF</div>{{end}}
           </div>
           <div class="doc-body">
             <h2>{{.Title}}</h2>

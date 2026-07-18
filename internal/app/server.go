@@ -51,6 +51,7 @@ func Run(cfg Config) error {
 			}
 			return path + "?v=" + version
 		},
+		"fileURL": fileURL,
 	}).ParseGlob("web/templates/*.html")
 	if err != nil {
 		return err
@@ -545,6 +546,19 @@ func safeBase(name string) string {
 	name = filepath.Base(name)
 	replacer := strings.NewReplacer("/", "-", "\\", "-", ":", "-", "\x00", "")
 	return replacer.Replace(name)
+}
+
+func fileURL(rel string) string {
+	rel = strings.ReplaceAll(rel, "\\", "/")
+	rel = strings.TrimLeft(filepath.ToSlash(rel), "/")
+	if rel == "" {
+		return "/files/"
+	}
+	parts := strings.Split(rel, "/")
+	for i, part := range parts {
+		parts[i] = url.PathEscape(part)
+	}
+	return "/files/" + strings.Join(parts, "/")
 }
 
 func defaultString(value, fallback string) string {

@@ -185,7 +185,16 @@ func walkEntity(e *message.Entity, fn func(filename, contentType string, body io
 			filename = dispParams["filename"]
 		}
 	}
+	filename = decodeMIMEFilename(filename)
 	return fn(filename, contentType, e.Body)
+}
+
+func decodeMIMEFilename(filename string) string {
+	decoded, err := new(mime.WordDecoder).DecodeHeader(filename)
+	if err != nil {
+		return filename
+	}
+	return decoded
 }
 
 func (s *Server) importPDFFile(path, originalName string, createdAt *time.Time) error {

@@ -14,7 +14,7 @@
       <h1>{{.Title}}</h1>
       <p class="muted">{{.OriginalName}}</p>
       <div class="doc-actions">
-        <a class="download-button" href="/files/{{.FilePath}}" download>Download</a>
+        <a class="download-button" href="{{fileURL .FilePath}}" download>Download</a>
       </div>
       <form method="post" action="/metadata/{{.ID}}" class="form metadata-form">
         <label>Title <input name="title" value="{{.Title}}" required></label>
@@ -37,7 +37,7 @@
       {{if .AnalysisError}}<p class="warn">AI fallback: {{.AnalysisError}}</p>{{end}}
     </aside>
     <section class="pdf-view">
-      <iframe src="/files/{{.FilePath}}" title="{{.Title}}"></iframe>
+      <iframe src="{{fileURL .FilePath}}" title="{{.Title}}"></iframe>
     </section>
   </main>
 </body>
