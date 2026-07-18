@@ -77,6 +77,7 @@ func Run(cfg Config) error {
 	mux.Handle("/imap/delete/", s.requireAuth(http.HandlerFunc(s.deleteIMAP)))
 	mux.Handle("/imap", s.requireAuth(http.HandlerFunc(s.addIMAP)))
 	mux.Handle("/paperless/import", s.requireAuth(http.HandlerFunc(s.importPaperless)))
+	mux.Handle("/maintenance/fix-filenames", s.requireAuth(http.HandlerFunc(s.fixFilenames)))
 	log.Printf("listening on %s", cfg.Addr)
 	return http.ListenAndServe(cfg.Addr, mux)
 }
@@ -365,7 +366,113 @@ func (s *Server) settings(w http.ResponseWriter, r *http.Request) {
 		"PaperlessJob":    job,
 		"PasswordError":   r.URL.Query().Get("password_error"),
 		"PasswordSuccess": r.URL.Query().Get("password_success") == "1",
+		"FilenameFix":     r.URL.Query().Get("filename_fix"),
 	})
+}
+
+type filenameFixStats struct {
+	Fixed   int
+	Skipped int
+	Failed  int
+}
+
+func (s *Server) fixFilenames(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	stats, err := s.fixEncodedFilenames()
+	if err != nil {
+		addLog(s.db, "error", "maintenance", "Filename repair failed: "+err.Error(), nil, nil)
+		http.Redirect(w, r, "/settings?filename_fix="+url.QueryEscape("Filename repair failed: "+err.Error()), http.StatusSeeOther)
+		return
+	}
+	message := fmt.Sprintf("Filename repair completed: %d fixed, %d skipped, %d failed.", stats.Fixed, stats.Skipped, stats.Failed)
+	addLog(s.db, "info", "maintenance", message, nil, nil)
+	http.Redirect(w, r, "/settings?filename_fix="+url.QueryEscape(message), http.StatusSeeOther)
+}
+
+func (s *Server) fixEncodedFilenames() (filenameFixStats, error) {
+	docs, err := listAllDocuments(s.db)
+	if err != nil {
+		return filenameFixStats{}, err
+	}
+	var stats filenameFixStats
+	for _, doc := range docs {
+		if err := s.fixEncodedFilename(doc, &stats); err != nil {
+			stats.Failed++
+			addLog(s.db, "error", "maintenance", fmt.Sprintf("Could not fix filename for document %d: %v", doc.ID, err), &doc.ID, nil)
+		}
+	}
+	return stats, nil
+}
+
+func (s *Server) fixEncodedFilename(doc Document, stats *filenameFixStats) error {
+	oldPath := safeDataPath(s.cfg.DataDir, doc.FilePath)
+	if oldPath == "" {
+		return fmt.Errorf("unsafe file path %q", doc.FilePath)
+	}
+	fileRel := strings.ReplaceAll(filepath.ToSlash(doc.FilePath), "\\", "/")
+	fileDir := filepath.Dir(fileRel)
+	if fileDir == "." {
+		fileDir = ""
+	}
+	fileBase := filepath.Base(fileRel)
+	prefix := documentFilePrefix(doc.ID, fileBase)
+	decodedName := safeBase(decodeMIMEFilename(doc.OriginalName))
+	if decodedName == "" || decodedName == doc.OriginalName {
+		storedName := strings.TrimPrefix(fileBase, prefix)
+		decodedStoredName := safeBase(decodeMIMEFilename(storedName))
+		if decodedStoredName == "" || decodedStoredName == storedName {
+			stats.Skipped++
+			return nil
+		}
+		decodedName = decodedStoredName
+	}
+	newRel := filepath.Join(fileDir, decodedName)
+	if prefix != "" && !strings.HasPrefix(decodedName, prefix) {
+		newRel = filepath.Join(fileDir, prefix+decodedName)
+	}
+	newPath := safeDataPath(s.cfg.DataDir, newRel)
+	if newPath == "" {
+		return fmt.Errorf("unsafe target path %q", newRel)
+	}
+	if oldPath != newPath {
+		if _, err := os.Stat(newPath); err == nil {
+			return fmt.Errorf("target already exists: %s", newRel)
+		} else if !errors.Is(err, os.ErrNotExist) {
+			return err
+		}
+		if err := os.Rename(oldPath, newPath); err != nil {
+			return err
+		}
+	}
+	oldTitle := strings.TrimSuffix(doc.OriginalName, filepath.Ext(doc.OriginalName))
+	newTitle := doc.Title
+	if doc.Title == oldTitle {
+		newTitle = strings.TrimSuffix(decodedName, filepath.Ext(decodedName))
+	}
+	if err := updateDocumentFilename(s.db, doc.ID, newTitle, decodedName, newRel); err != nil {
+		if oldPath != newPath {
+			_ = os.Rename(newPath, oldPath)
+		}
+		return err
+	}
+	stats.Fixed++
+	addLog(s.db, "info", "maintenance", fmt.Sprintf("Fixed filename %q to %q", doc.OriginalName, decodedName), &doc.ID, nil)
+	return nil
+}
+
+func documentFilePrefix(id int64, name string) string {
+	prefix := fmt.Sprintf("%d-", id)
+	if strings.HasPrefix(name, prefix) {
+		return prefix
+	}
+	paperlessPrefix := fmt.Sprintf("%d-paperless-", id)
+	if strings.HasPrefix(name, paperlessPrefix) {
+		return paperlessPrefix
+	}
+	return ""
 }
 
 func (s *Server) changePassword(w http.ResponseWriter, r *http.Request) {
@@ -591,9 +698,20 @@ func removeDataFile(dataDir, rel string) {
 	if rel == "" {
 		return
 	}
+	path := safeDataPath(dataDir, rel)
+	if path != "" {
+		_ = os.Remove(path)
+	}
+}
+
+func safeDataPath(dataDir, rel string) string {
+	if rel == "" {
+		return ""
+	}
 	path := filepath.Clean(filepath.Join(dataDir, rel))
 	root := filepath.Clean(dataDir) + string(os.PathSeparator)
 	if strings.HasPrefix(path, root) {
-		_ = os.Remove(path)
+		return path
 	}
+	return ""
 }

@@ -306,6 +306,30 @@ func listDocuments(db *sql.DB, q, tag string, limit int) ([]Document, error) {
 	return docs, rows.Err()
 }
 
+func listAllDocuments(db *sql.DB) ([]Document, error) {
+	rows, err := db.Query(`select id,title,original_name,file_path,preview_path,sha256,tags,summary,entities,keywords,synonyms,created_at,processed_at,analysis_error
+		from documents
+		order by id`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var docs []Document
+	for rows.Next() {
+		d, err := scanDocument(rows)
+		if err != nil {
+			return nil, err
+		}
+		docs = append(docs, *d)
+	}
+	return docs, rows.Err()
+}
+
+func updateDocumentFilename(db *sql.DB, id int64, title, originalName, filePath string) error {
+	_, err := db.Exec(`update documents set title = ?, original_name = ?, file_path = ? where id = ?`, title, originalName, filePath, id)
+	return err
+}
+
 func allTags(db *sql.DB) ([]string, error) {
 	rows, err := db.Query(`select tags from documents where tags <> ''`)
 	if err != nil {

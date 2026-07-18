@@ -53,6 +53,13 @@
       {{end}}
     </section>
     <section>
+      <h1>Maintenance</h1>
+      {{if .FilenameFix}}<p class="notice">{{.FilenameFix}}</p>{{end}}
+      <form action="/maintenance/fix-filenames" method="post" class="form">
+        <button type="submit">Fix encoded filenames</button>
+      </form>
+    </section>
+    <section>
       <h1>IMAP Accounts</h1>
       <form action="/imap" method="post" class="form compact">
         <label>Name <input name="name" required></label>
